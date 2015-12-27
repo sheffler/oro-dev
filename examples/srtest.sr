@@ -1,0 +1,10 @@
+t 100
+s pytest.x 4'b0101
+s pytest.y 4'b10xz
+c setting some things at time 100
+t 200
+r pytest.x 4'b01xx
+t 300
+s pytest.x 4'b10xx
+t 400
+r pytest.x 4'bxx10

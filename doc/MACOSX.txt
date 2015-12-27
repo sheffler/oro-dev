@@ -1,0 +1,51 @@
+
+MacOSX 10.3 - Panther
+
+- Install the developer tools (XCode).  This will install gcc.
+
+- I also installed Xwindows, although this is not strictly necessary.
+XWindows for Panther is a download from the apple site.
+
+- If XWindows did not install it, download and install "dlcompat."
+This is a compatibility library that provides "dlopen" emulation on
+Panther.
+
+- Install the free Verilog tools GPLCVER and ICARUS.  GPLCVER for
+MacOSX is available precompiled for Mac OSX.  Icarus compiled with no
+problems for me using gcc3.3.
+
+- Build Python yourself from sources.  Follow the instructions in
+DYNNOTES.txt selecting a local install directory (--prefix) and making
+sure that all necessary modules are *statically* linked.
+
+- Be sure to set your PATH env variable to point to your local Python
+and not the default system Python pre-installed on Mac.
+
+- Build APVM.  The last issue I had was figuring out the appropriate
+flags to create a dynamic library that would work with cver/icarus.  I
+got the correct flags from the Icarus distribution.  This makes the
+final step of the compilation process the following.
+
+  gcc  -bundle -undefined suppress -flat_namespace  $(OBJS) $(LIBPY)
+  $(LIBM) $(LIBS) $(LOCALMODLIBS) -o libapvmvpi.so
+
+By the time you get this, there may be a Makefile.osx available that
+sets up things correctly.
+
+- That's It!!
+
+================================================================
+
+MacOSX 10.3 and Tkinter
+
+I have not tried getting Tkinter to work on Panther.
+
+
+================================================================
+
+Notes regarding dynamic linking on OSX:
+
+If anyone has an approach to building Python and APVM that does not
+require statically linking all Python modules, I would like to hear
+about it!
+

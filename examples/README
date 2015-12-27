@@ -1,0 +1,135 @@
+
+This directory contains PLI applications that demonstrate many of the
+capabilities of APVM and Oroboro.
+
+Shell scripts are given for different types of simulators.
+
+      .shi - shell scripts for Icarus examples
+      .cver - shell scripts for CVER examples
+      .nc  - shell scripts for NC-Verilog examples
+      .vcs - shell scripts for VCS examples
+      .mti - shell scripts for MTI examples
+
+
+Files
+	RUNALL.shi
+	RUNALL.nc
+run all of the examples for a particular simulator.
+
+
+================ APVM EXAMPLES ================
+
+py0
+	Invokes the APVM built-in example which shows how to interact
+	with Verilog registers and the scheduler.  This is a good test
+	to run as a very simple sanity check that Python and the APVM
+	code are properly linked into the simulator.
+
+pluargs
+	Illustrate how to handle +plusargs.
+	This is another good first test to run to see if the APVM
+	application has been built properly.
+
+
+apvmdoc
+	Print the Python doc strings from the APVM module.
+
+
+pymem
+
+	This example uses the apvm_mem application.  It loads it with
+	data and then dumps it to a file.  You can look at the dump
+	file to see the address/data pairs written.
+
+	This is a good example to try out the save/restore facility.
+	To do so (with NC-Verilog) add the -s flag to the first
+	invocation. Run for a while and then save the image.
+
+	ncsim> run 100
+	...
+	ncsim> save save1
+	Saved snapshot worklib.save1:v
+
+	Then, run NC-Verilog with the restore option to see the
+	simulation continue from the save point.  If all is well, you
+	will see that the dump file has the union of values from
+	BEFORE and AFTER the save/restore.
+
+	% ncverilog ... -r worklib.save1:v
+
+shownets
+	Traverse the verilog database printing information about the
+	nets in a module.
+
+srtest
+	Using a "stimulus/response" file, apply the stimuli to a test
+	and monitor the responses checking for errors.
+
+checker
+	Monitor a verilog net, checking for a particular sequence.
+	Print "Found!" everytime the complete sequence is detected.
+	(Uses Python 2.3 "generators" to implement a re-entrant
+	sequence watcher.)
+
+delayex
+	Implements a delay element in Python and interacts with the
+	Verilog scheduler.  The delay element correctly pipelines
+	state changes if the delay is longer than the rate at which
+	the input changes.
+
+tkserverdemo
+
+	This example shows a simple Tk server process that serves up
+	windows for the Verilog process to write to.  Such an
+	application may be useful in a simulation farm where you may
+	wish to have your simulation send periodic messages about its
+	status across the network to your workstation.
+
+
+================ OROBORO EXAMPLES ================
+
+oro4
+	Illustrates basic concepts: timers, watching a signal change and
+	setting a signal value.
+
+oro5
+	An example of two tasks watching clock edges generated in Verilog.
+	The tasks also signal each other using an event.
+
+oro6
+	Shows how to write a test for a simple "memory" model written in 
+	Verilog.  Performs one write and one read.
+
+oro7
+	Expands on oro6, writing random values to random locations.  The
+	test runs for thousands of cycles.
+
+oro8
+	Illustrates how to use generators to produce sequences of
+	tasks on demand.
+
+oro9
+	A test of simreset().  Not completely functional, but illustrates
+	its use.  With CVER, it seems to leave the user in the interactive
+	debugger.
+
+oroconcur
+
+	Simple test of multiple tasks waiting on the same edge
+	to get and set values.  A simple logic function written
+	in verilog (a^b^c) is "verified" against the same expression
+	in python.
+
+orodoc 
+        Start up an HTML pydoc server with all of the Oroboro and APVM
+	modules loaded.  Point your browser as directed to browse
+	classes and doc.  This is a good way to view all of the pydoc
+	available for the packages.
+
+
+================ TEMPORAL EXPRESSION EXAMPLES ================
+
+tetest0
+	Runs a series of short tests, each illustrating some
+	basic operators.
+

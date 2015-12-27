@@ -1,0 +1,57 @@
+GPLCVER_2.12a of 05/16/07 (Linux-elf).
+Copyright (c) 1991-2007 Pragmatic C Software Corp.
+  All Rights reserved.  Licensed under the GNU General Public License (GPL).
+  See the 'COPYING' file for details.  NO WARRANTY provided.
+Today is Thu Dec 10 11:39:54 2015.
+  Verbose mode is on.
+  Invoked by: "cver".
+  Inform messages will be printed.
+  Event processing will be traced.
+  +loadvpi= dynamic library ../src/libapvmvpi loaded with bootstrap routine(s) :apvm_startup
+*** Registering APVM PLI functions.
+  P1364 2001 config map library not specified - using -y/-v libraries.
+  Begin Translation:
+Compiling source file "py0.v"
+  Begin pass 2:
+  Approximately 477659 bytes storage allocated (excluding udps).
+Highest level modules:
+pytest
+--py0.v(4) INFORM-- [437] in module pytest: reg res set but not accessed
+  Verbose mode statistics:
+  22 source lines read (includes -v/-y library files).
+  Design contains 1 module types.
+  There are 3 cross module and 0 intra module hierarchical references.
+
+  Variable storage in bytes: 4 for scalars, 32 for non scalars.
+  Begin load/optimize:
+  Approximately 484706 bytes storage allocated (excluding udps).
+Cannot find class "mple"
+-- adding initial procedural start at statement **py0.v(11)
+
+>>>> wire initialization complete <<<<<
+  Begin simulation:
+  Approximately 684434 bytes storage allocated (excluding udps).
+
+
+-- resuming at statement **py0.v(11)
+-- scheduling delay resume at **py0.v(11) for time 1
+
+<<< event tracing at time 1
+-- resuming at statement **py0.v(11)
+         1
+Pycall calltf failed to provide return val :-(
+-- scheduling delay resume at **py0.v(16) for time 4
+
+<<< event tracing at time 4
+-- resuming at statement **py0.v(16)
+-- scheduling delay resume at **py0.v(18) for time 10
+
+<<< event tracing at time 10
+-- resuming at statement **py0.v(18)
+Pycall othercallback failed to provide return val :-(
+0 simulation events and 0 declarative immediate assigns processed.
+8 behavioral statements executed (4 procedural suspends).
+  Times (in sec.):  Translate 0.0, load/optimize 0.1, simulation 0.1.
+  Approximately 684434 bytes storage allocated (excluding udps).
+  There were 0 error(s), 0 warning(s), and 1 inform(s).
+End of GPLCVER_2.12a at Thu Dec 10 11:39:54 2015 (elapsed 0.0 seconds).

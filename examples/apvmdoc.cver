@@ -1,0 +1,7 @@
+#!/bin/csh
+
+setenv PYTHONPATH .:../python
+# setenv VPI_TRACE -
+# setenv APVM_C_DEBUGGING 1
+
+cver +loadvpi=../src/libapvmvpi:apvm_startup apvmdoc.v  >& PYDOC.TXT

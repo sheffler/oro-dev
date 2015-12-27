@@ -1,0 +1,57 @@
+Environment Variables
+
+APVM_CONFIGFILE
+  This names the configuration file that APVM should read.  If set,
+  this file takes precedence over ./apvm.cfg and ~/apvm.cfg.
+
+APVM_PRERUN_HOOK
+  If set, this string is evaluated by the Python interpreter
+  immediately after Py_Initialize() and before any APVM code
+  is loaded or evaluated; even before the apvm module is loaded.
+
+  The hook is intended mainly for debugging.  When running
+  Python embedded in another application it may behave differently
+  with respect to search paths and other concerns.  Dynamically linked
+  libraries may be problematic, and being able to investigate Python
+  sys.path and other configuration values is necessary.  This hook
+  helps make that process easier by allowing the user to run a string
+  or start up an interpreter eval loop.
+
+  Example:
+    setenv APVM_PRERUN_HOOK 'import sys; print sys.path'
+
+APVM_C_DEBUGGING
+  This turns on some debugging fprintf statements in the C code  
+  that are normally tedious to observe, but can be helpful in finding
+  out how far the code gets if things are really going wrong.  C-code
+  debugging messages start with the string "+++ APVM:".
+
+
+APVM Configuration Parameters
+
+An example configuration file is in "examples/apvm.cfg," and is used
+by APVM when running examples in this directory.  The APVM system
+itself is configured with parameters in the "[apvm]" section of the
+config file, or equivalently, +apvm:paramxxx=yyy plusarg options on
+the Verilog command line.
+
+apvm:error_net
+  If set, this is the path name of a Verilog register that is to be used
+  as the error counter.  Verilog code may examine and increment this
+  value when errors are encountered and APVM will synchronize its
+  count with it.
+  
+apvm:warning_net
+  If set, this is the path name of a Verilog register that is to be used
+  as the warming counter.  Verilog code may examine and increment this
+  value when warnings are encountered and APVM will synchronize its
+  count with it.
+
+apvm:debug
+  Enables Python-level debugging messages in the APVM module if set
+  to 1.
+
+apvm:shelve_file
+  If the save/restore capability is to be used, this parameter names
+  the Python shelve file to be used.
+

@@ -1,0 +1,10 @@
+#!/bin/csh -x
+
+setenv PYTHONPATH .:../python
+
+cver -informs +loadvpi=../src/libapvmvpi:apvm_startup cosim.v +oro:module=cosim +oro:task=mainfn
+
+
+
+
+

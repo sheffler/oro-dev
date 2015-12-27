@@ -1,0 +1,34 @@
+
+OpenOffice has been used to produce the APVM and Oroboro documents.
+
+CONFIGURATION.txt
+
+  notes about APVM system configuration through its config file.
+
+
+PYDOC.TXT
+
+  APVM docstrings extracted from apvm.py module using pydoc.py.
+
+CVERNOTES.txt
+
+  Notes about the Cver simulator.
+
+DYNNOTES.txt
+
+  Notes about dynamic linking issues, and a recommended Python
+  build process that encourages static linking.
+
+ICARUSNOTES
+
+  Notes about the Icarus simulator.
+
+MACOSX
+
+  How to build and run on Mac OSX.
+
+PYTHONNOTES.txt
+
+  Misc notes about Python build issues, setting PYTHONPATH.
+
+

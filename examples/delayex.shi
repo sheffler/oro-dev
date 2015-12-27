@@ -1,0 +1,10 @@
+#!/bin/csh -x
+
+# set up environment for Icarus/Python
+source COMMON.shi
+
+iverilog -o IVWORK/delayex apvm_delay.v delayex.v
+
+vvp -v -m ../src/libapvmvpi IVWORK/delayex
+
+

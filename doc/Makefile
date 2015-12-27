@@ -1,0 +1,8 @@
+
+#
+# Clean up
+#
+
+clean:
+	-rm *~
+

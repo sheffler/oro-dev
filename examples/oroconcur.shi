@@ -1,0 +1,12 @@
+#!/bin/csh -x
+
+# set up environment for Icarus/Python
+source COMMON.shi
+
+iverilog -o IVWORK/oroconcur oroconcur.v memmod.v
+# setenv VPI_TRACE -
+vvp -v -m ../src/libapvmvpi IVWORK/oroconcur +oro:module=oroconcur +oro:task=mainfn
+
+
+
+

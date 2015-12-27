@@ -1,0 +1,130 @@
+#
+# Use Python distutils to parameterize makefile
+#   User still needs to set VPI include file path
+#
+
+#
+# This must be set to the location of the "vpi_user.h" file
+#
+#VPIINC		= /usr/include
+# VPIINC		= /home/sheffler/src/gplcver-1.10i.linux.bin/pli_incs/
+# VPIINC		= /home/sheffler/src/gplcver-2.00d.linux.bin/pli_incs/
+VPIINC		= /Users/tom/src/gplcver-2.10a.osx.1.bin/pli_incs/
+
+
+RM 	= /bin/rm
+
+# Ex: gcc
+CC		= $(shell python -c 'from distutils.sysconfig import *; print get_config_vars().get("CC")')
+
+# Ex: -fPIC
+CCSHARED	= $(shell python -c 'from distutils.sysconfig import *; print get_config_vars().get("CCSHARED")')
+
+
+# Ex: '-fno-strict-aliasing -DNDEBUG -g -O3 -Wall -Wstrict-prototypes'
+CFLAGS		:= $(shell python -c 'from distutils.sysconfig import *; print get_config_vars().get("CFLAGS")')
+
+#
+# These are hacks until I get the code in more strictly conforming
+#
+
+CFLAGS := $(subst -Wstrict-prototypes,,$(CFLAGS))
+CFLAGS := $(subst -Wno-strict-aliasing,,$(CFLAGS))
+CFLAGS := $(subst -O3,,$(CFLAGS))
+CFLAGS := $(subst -Wall,,$(CFLAGS))
+
+# Ex: 'gcc -pthread -shared'
+LDSHARED	= $(shell python -c 'from distutils.sysconfig import *; print get_config_vars().get("LDSHARED")')
+
+
+# Ex: ranlib
+RANLIB		= $(shell python -c 'from distutils.sysconfig import *; print get_config_vars().get("RANLIB")')
+
+# Ex: ar
+AR		= $(shell python -c 'from distutils.sysconfig import *; print get_config_vars().get("AR")')
+
+# Ex: -ldl -pthread -util
+LIBS		= $(shell python -c 'from distutils.sysconfig import *; print get_config_vars().get("LIBS")')
+LIBM		= $(shell python -c 'from distutils.sysconfig import *; print get_config_vars().get("LIBM")')
+LOCALMODLIBS	= $(shell python -c 'from distutils.sysconfig import *; print get_config_vars().get("LOCALMODLIBS")')
+
+# Ex: gcc -shared
+LDSHARED	= $(shell python -c 'from distutils.sysconfig import *; print get_config_vars().get("LDSHARED")')
+
+# Ex: /usr/local/include/python2.2
+INCLUDEPY	= $(shell python -c 'from distutils.sysconfig import *; print get_config_vars().get("INCLUDEPY")')
+
+INC = -I$(VPIINC) -I$(INCLUDEPY)
+
+# Directory and name of python library (ex: /usr/local/lib/python2.3/config/libpython2.3.a)
+LIBPL		= $(shell python -c 'from distutils.sysconfig import *; print get_config_vars().get("LIBPL")')
+LIBRARY		= $(shell python -c 'from distutils.sysconfig import *; print get_config_vars().get("LIBRARY")') 
+
+LIBPY = $(LIBPL)/$(LIBRARY)
+
+#
+# Concatenate all of the things CC needs
+#
+CFLAGS := $(CFLAGS) $(CCSHARED) $(INC) -g -DDEBUG -fPIC -fno-builtin
+
+# unused right now
+LINKFORSHARED	= $(shell python -c 'from distutils.sysconfig import *; print get_config_vars().get("LINKFORSHARED")')
+
+
+OBJS =  apvm_core.o \
+	apvm_malloc.o \
+	apvm_msg.o \
+	apvm_calltf.o \
+	apvm_vpi.o
+
+#
+# Default target
+#
+all: libapvmvpi.a libapvmvpi.so libapvmvpi.vpl
+	-$(RM) $(OBJS)
+
+#
+# Icarus wants the .so file to be named .vpl
+#
+libapvmvpi.vpl: libapvmvpi.so
+	ln -s libapvmvpi.so libapvmvpi.vpl
+
+
+#
+# A library containing just the functions defined here
+#
+libapvmvpi.a: $(OBJS)
+	$(AR) ruv libapvmvpi.a $(OBJS)
+	-$(RANLIB) libapvmvpi.a
+
+#
+# A DLL containing these functions and all of LIBAPVM.
+# Suitable for dynamic linking w/ Verilog with +loadvpi 
+#
+libapvmvpi.so: $(OBJS)
+	$(LDSHARED) -r $(OBJS) $(LIBPY) $(LIBM) $(LIBS) $(LOCALMODLIBS) -o libapvmvpi.so
+
+
+
+#
+# Build the vpidefs from a standard vpi_user include file
+#
+apvm_vpidefs.h: $(VPIINC)/vpi_user.h
+	python ../python/vpidefs.py $(VPIINC)/vpi_user.h > apvm_vpidefs.h
+
+#
+# record this dependency for make
+#
+apvm_calltf.o: apvm_vpidefs.h
+
+
+#
+# Clean up the dir
+#
+clean:
+	-rm libapvmvpi.a libapvmvpi.so libapvmvpi.vpl
+	-rm apvm_vpidefs.h
+	-rm *.*~
+	-rm *.~*~
+
+

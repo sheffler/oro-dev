@@ -1,0 +1,11 @@
+#!/bin/csh -x
+
+# set up environment for Icarus/Python
+source COMMON.shi
+
+iverilog -o IVWORK/apvmdoc apvmdoc.v
+
+vvp -m ../src/libapvmvpi IVWORK/apvmdoc > PYDOC.TXT
+
+
+

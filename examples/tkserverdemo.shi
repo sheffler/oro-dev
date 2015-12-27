@@ -1,0 +1,30 @@
+#!/bin/csh
+
+# for linux
+# setenv TK_LIBRARY /usr/lib/tk8.3/
+
+source COMMON.shi		# set up environment for Icarus/Python
+
+# Compile the verilog
+iverilog -o IVWORK/tkserverdemo tkserverdemo.v
+
+# Start a server
+../../Python-2.3.3/python tkserver.py >& SERVEROUT &
+
+# give it some time to start
+sleep 2
+
+# Start one Verilog - send its output to "win1"
+vvp -m ../src/libapvmvpi IVWORK/tkserverdemo +tkserver:host=localhost +tkserver:win=win1 &
+
+# Give the first one a head start
+sleep 1
+
+# Start another Verilog - send its output to "win2"
+vvp -m ../src/libapvmvpi IVWORK/tkserverdemo +tkserver:host=localhost +tkserver:win=win2 &
+
+
+
+
+
+

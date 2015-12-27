@@ -1,0 +1,10 @@
+#!/bin/csh -x
+
+if (! -e MTIWORK) then
+  vlib MTIWORK
+endif
+
+vlog -work MTIWORK plusargs.v
+
+setenv PYTHONPATH .:../python
+vsim -lib MTIWORK -pli ../src/libapvmvpi.so -c -do run plusargs +option1=value1 +flag1 -f plusargs.f

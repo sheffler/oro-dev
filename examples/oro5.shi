@@ -1,0 +1,12 @@
+#!/bin/csh -x
+
+# set up environment for Icarus/Python
+source COMMON.shi
+
+iverilog -o IVWORK/oro5 oro5.v
+# setenv VPI_TRACE -
+vvp -v -m ../src/libapvmvpi IVWORK/oro5 +oro:module=oro5 +oro:task=mainfn
+
+
+
+

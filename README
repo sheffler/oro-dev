@@ -1,0 +1,133 @@
+
+Welcome to APVM Version 0.25.  This package embeds Python into Verilog
+using the VPI interface and provides a framework for implementing PLI
+applications in Python.  Oroboro is an test and modeling application
+built using APVM.
+
+
+DOCUMENTATION
+
+Documentation is available from apvm.sourceforge.net, and in the doc/
+directory of this distribution.
+
+The example orodoc.[cver,shi] starts up an HTML server with all of
+APVM and Oroboro pydoc loaded.  You can then view the class
+documentation in your browser.  Start the example and follow
+instructions.
+
+
+
+INSTALLATION
+
+
+			  *** IMPORTANT ***
+
+You should compile and build your own Python system from sources on
+your own machine.  The reason for this, is that to embed Python in
+another application (Verilog), the "libpython.a" library created
+during build is needed, as are all of the compile flags used in the
+creation of this library.  (The library basically is Python, minus the
+"main" function.)  Precompiled distributions often lack this library,
+and unless you have compiled the sources on your machine, you can only
+guess at the GCC options used to create libpython.a.  The good news
+is, that the Python build process is very well automated and is easy.
+
+The default Python build normally statically links as few modules as
+possible, and relies on dynamic linking for even standard modules.  It
+is now recommended that you build Python with all standard modules
+statically linked.  See doc/DYNNOTES.txt for instructions on the
+recommended build process for Python.
+
+Also, make sure that the "python" executable found first in your
+PATH is this newly created Python implementation.
+
+			  *** IMPORTANT ***
+	
+Now that your Python environment is compiled and built on your
+installation machine, the Python "distutils" package properly
+identifies the compiler and load options used to build Python
+automatically.  The compilation and installation is relatively easy
+from here.
+
+  cd src/
+
+  edit "Makefile.dist" and set the VPIINC variable to point to the
+  directory of the vpi_user.h file for the target Verilog simulator
+  (Icarus, NC, VCS, CVER, Modelsim, etc.)
+
+  Edit "apvm_calltf.h" - to set some #define values.
+
+  You must set
+    #define APVM_HAS_PUT_USERDATA ??
+  as appropriate.  See apvm_calltf.h for details about which will work
+  best with your simulator.
+
+  If you desire Verilog Save/Restore capability, also define
+    #define APVM_SAVERESTORE 1
+
+  If your simulator does NOT support vpi_control() set the following to 0.
+    #define APVM_HAS_VPI_CONTROL 0
+
+  Finally, run make.
+
+    % make -f Makefile.dist
+
+This should be all that is required to bulid the the apvm static and
+dynamically linked libraries.
+
+If the distutils package is not operating properly, or your
+installation of Python is non-standard in some other way, you may need
+to try a makefile that does not use distutils.  This most often
+happens if you have not built your Python installation from sources
+and compiled it yourself.  I highly recommend that you do so as if
+done correctly, this simplifies almost everything else.
+
+Using "Makefile.rh9" as a starting place, edit this file to suit your
+installation.  The main difficulty in building APVM is to figure out
+the libraries that must be linked with Python to build a working
+system.  Usually, I get this information by building Python.  This
+process is complicated by the fact that there are so many ways to
+configure Python and the libraries that must be linked with APVM
+depend on those that are to be linked with Python.
+
+If your verilog simulator is complaining about the registration of the
+$apvm PLI calls, then you may need to edit the function
+apvm_py_register in file apvm_calltf.c.  Comments there describe the
+issues.
+
+
+CONFIGURING PYTHON
+
+If Python is installed in a standard place, then you may not need to
+do anything.  If, however, when the Python interpreter starts up in
+APVM it cannot find its libraries, then you may need to set PYTHON
+environment variables.  See doc/PYTHONNOTES.txt for some notes about
+how to do this.
+
+
+LINKING WITH YOUR SIMULATOR
+
+The "examples/" directory contains examples showing how to link APVM
+with most of the major Verilog simulators.  Notes in the "doc/"
+directory may also address issues with particular simulators.
+
+
+TESTING APVM
+
+If APVM is built and installed properly, then all of the examples
+should run.  A good one to start with is "py0."  Another good
+fundamental test is "plusargs."
+
+
+CONFIGURING APVM
+
+See "doc/CONFIGURATION.txt" for notes about runtime configuration of
+APVM.
+
+
+SIMULATOR SPECIFIC CONCERNS
+
+See "notes" files in the "doc/" directory for notes pertaining to your
+simulator.
+
+

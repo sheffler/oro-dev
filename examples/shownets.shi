@@ -1,0 +1,10 @@
+#!/bin/csh -x
+
+# set up environment for Icarus/Python
+source COMMON.shi
+
+iverilog -o IVWORK/shownets shownets.v
+
+vvp -m ../src/libapvmvpi IVWORK/shownets
+
+

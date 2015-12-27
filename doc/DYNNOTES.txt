@@ -1,0 +1,158 @@
+
+Notes about Dynamic Linking
+
+* Icarus loads ".vpi" files (regular .so files that are opened as
+  RTLD_LAZY) and ".vpl" files - .so files that can resolve other
+  dependencies.  This latter type is required for the apvm.so, since
+  many Py modules are themselves .so files and need to resolve
+  dependencies in apvm.so.  (See note *Problems below for a better
+  description.)
+
+  Be sure to name the apvm .so file in something that ends in ".vpl" or make
+  a symbolic link from ".vpl" to ".so".
+
+* man dlopen(3) described how libraries are either opened with the
+  RTLD_GLOBAL flag or RTLD_LAZY.  GLOBAL means that symbols in the
+  opened library can be resolved as further libraries are opened.
+  This is the mode that Icarus required.  Icarus provides this mode
+  with ".vpl" objects.
+
+
+* Problems with Nested Shared Objects
+
+Python is usually the top-level program; in APVM Python is embedded in
+Verilog.  Many Python modules are configured (by default) as shared
+objects (.so files).  Python shared objects may reference symbols
+defined in the top-level Python program.
+
+Consider the loading of the "struct" module.  It is implemented as a
+shared object "_struct.so" with a reference to the global Python
+symbol "PyErr_foo."  When this symbol is needed, the loader resolves
+the reference in the top-level Python program.
+
+The figure below illustrates the relationship between the top-level
+program, the shared object and the symbol in question.  The reference
+to symbol "PyErr_foo" in the shared object is satisfied by the
+definition of the symbol at the top level.
+    	    					       
+		+---------------------------------------------+
+     	       	| python				      |
+		|					      |
+		|			      +---------------+
+		|			      | _struct.so    |
+		|			      |		      |
+		|			      |		      |
+		|			      |	&PyErr_foo    |
+		|			      +---------------+
+    	       	|  PyErr_foo				      |
+		+---------------------------------------------+
+
+
+
+When Python is embedded into another top-level program as a shared
+object, a more complicated situation occurs.  This is illustrated in
+the figure below for a top-level program called "cver."  In this case,
+"libapvmvpi.so" is the shared object that includes the Python
+interpreter.
+
+		+---------------------------------------------+
+   		| cver 	 		       		      |
+  		|     			       		      |
+  		|     	       +------------------------------|
+  		|     	       | libapvmvpi.so (python)	      |
+  		|	       |	       	       	      |
+  		|	       |	      +---------------|
+  		|	       |	      |	_struct.so    |
+  		|     	       |      	      |	       	      |
+		|     	       |    	      |	       	      |
+		|     	       |	      |	&PyErr_foo    |
+		|   	       |	      +---------------|
+		|   	       |	       	       	      |
+		|   	       |	       	       	      |
+		|	       | PyErr_foo     	       	      |
+		|	       +------------------------------|
+		|	     		      	       	      |
+    	    	| (?PyErr_foo)		      	       	      |
+		+---------------------------------------------+
+						       
+In this configuration, a problem can occur when Python attempts to
+import a module implemented as a shared library.  In the case
+illustrated above, the module references the symbol "PyErr_foo" which
+is defined in the Python shared object ("libapvmvpi.so").  However, on
+some systems, after the symbol is not located in "_struct.so" the
+loader looks at the top-level program only in the location shown as
+"?PyErr_foo" in this diagram.  In this case, however, the symbol
+resides in "libapvmvpi.so" and the loader may report that the symbol
+is not found, resulting in an error.
+
+Most systems *do* support directives to the "dlopen" function that can
+help the loader resolve these dependencies.  For instance, loader flag
+RTLD_GLOBAL on some systems tells the loader to merge loaded symbols
+into the top-level.  However, when you do not have access to the
+top-level program source code and cannot recompile it, you may not be
+able to select this option.
+
+Sometimes setting "LD_xxx" environment variables can help, or using
+"LD_PRELOAD" to force the preloading of the Python library like this:
+setenv LD_PRELOAD=...../libpython2.3.so.
+
+* Recommendation For Python Build
+
+The simplest solution I have found is to build Python with all
+necessary modules statically linked into the Python static library
+"libpython2.3.a."  This avoids the problem altogether, because once
+"libapvmvpi.so" is loaded, no further shared objects are loaded by
+Python.
+
+The way you cause modules to be linked statically is by editing the
+"Modules/Setup" file after the configure process.  This makes a
+typical build process look like this for a Python installation in a
+local directory.
+
+	# (1) untar the distribution into a build directory
+	% tar -xvf Python-2.3.4.tar
+
+	# (2) set final destination location using prefix
+	% ./configure --prefix=/home/tom/src/Python
+	
+	# (3) select statically linked modules - see below
+	% emacs Modules/Setup 
+
+	# (4) compile
+	% make
+
+	# (5) install in location given by --prefix above
+	% make install
+
+Editing the "Modules/Setup" file consists of uncommenting the lines
+for the modules you wish to be statically linked.  It is also
+important to *add* the line for the _random module, because many
+Oroboro features make use of random number generation.
+
+Uncomment these lines:
+
+array arraymodule.c	# array objects
+cmath cmathmodule.c # -lm # complex math library functions
+math mathmodule.c # -lm # math library functions, e.g. sin()
+struct structmodule.c	# binary structure packing/unpacking
+time timemodule.c # -lm # time operations and variables
+operator operator.c	# operator.add() and similar goodies
+_weakref _weakref.c	# basic weak reference support
+_testcapi _testcapimodule.c    # Python C API test module
+unicodedata unicodedata.c    # static Unicode character database
+fcntl fcntlmodule.c	# fcntl(2) and ioctl(2)
+pwd pwdmodule.c		# pwd(3) 
+grp grpmodule.c		# grp(3)
+select selectmodule.c	# select(2); not on ancient System V
+_csv _csv.c
+_socket socketmodule.c
+binascii binascii.c
+cStringIO cStringIO.c
+cPickle cPickle.c
+
+And ADD these lines:
+
+# ALSO: add _randdommodule as static
+_random _randommodule.c
+
+						       

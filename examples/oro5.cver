@@ -1,0 +1,9 @@
+#!/bin/csh -x
+
+setenv PYTHONPATH .:../python
+
+cver -informs +loadvpi=../src/libapvmvpi:apvm_startup oro5.v +oro:module=oro5 +oro:task=mainfn
+
+
+
+

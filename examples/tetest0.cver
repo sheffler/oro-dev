@@ -1,0 +1,28 @@
+#!/bin/csh
+#
+# This shell script runs *all* of the temporal expression tests
+
+setenv PYTHONPATH .:../python
+
+# -et +verbose 
+
+cver -informs +loadvpi=../src/libapvmvpi:apvm_startup tetest0.v +oro:module=tetest0 +oro:task=mainfn +oro:test=alt0
+
+cver -informs +loadvpi=../src/libapvmvpi:apvm_startup tetest0.v +oro:module=tetest0 +oro:task=mainfn +oro:test=conj0
+
+cver -informs +loadvpi=../src/libapvmvpi:apvm_startup tetest0.v +oro:module=tetest0 +oro:task=mainfn +oro:test=conj1
+
+cver -informs +loadvpi=../src/libapvmvpi:apvm_startup tetest0.v +oro:module=tetest0 +oro:task=mainfn +oro:test=repeat0
+
+cver -informs +loadvpi=../src/libapvmvpi:apvm_startup tetest0.v +oro:module=tetest0 +oro:task=mainfn +oro:test=repeat1
+
+cver -informs +loadvpi=../src/libapvmvpi:apvm_startup tetest0.v +oro:module=tetest0 +oro:task=mainfn +oro:test=int0
+
+cver -informs +loadvpi=../src/libapvmvpi:apvm_startup tetest0.v +oro:module=tetest0 +oro:task=mainfn +oro:test=cond0
+
+cver -informs +loadvpi=../src/libapvmvpi:apvm_startup tetest0.v +oro:module=tetest0 +oro:task=mainfn +oro:test=once0
+
+cver -informs +loadvpi=../src/libapvmvpi:apvm_startup tetest0.v +oro:module=tetest0 +oro:task=mainfn +oro:test=inv0
+
+
+ 

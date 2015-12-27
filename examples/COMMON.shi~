@@ -1,0 +1,15 @@
+#
+# Set environment for running Icarus/Python
+#
+
+
+# setenv PYTHONPATH .:../python:/usr/local/lib/python23.zip:/home/sheffler/src/Python-2.3.3/Lib:/home/sheffler/src/Python-2.3.3/Lib/plat-linux2:/home/sheffler/src/Python-2.3.3/Lib/lib-tk:/home/sheffler/src/Python-2.3.3/Modules:/home/sheffler/src/Python-2.3.3/build/lib.linux-i686-2.3
+
+setenv PYTHONPATH .:../python
+
+if (! -e IVWORK) then
+  echo "Creating Icarus Work Directory: IVWORK"
+  mkdir IVWORK
+endif
+
+

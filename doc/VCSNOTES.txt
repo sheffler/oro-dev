@@ -1,0 +1,12 @@
+
+VCS offers its own challenges for compilation.  Here are just a few
+notes that may help.
+
+- When building Python, statically link all standard modules,
+  especially those for math and random.  Follow directions for
+  building Python at the end of doc/DYNNOTES.txt
+
+- You must determine all libraries that Python needs. Here is a
+  command line that worked at one site.
+
+% vcs -R -lpthread -lm -ldl -ltk8.3 -ltcl8.3 -lutil +vpi ../src/libapvmvpi.a -P ../src/apvm.tab /usr/lib/python2.2/config/libpython2.2.a +plusarg_save +option1=value1 +flag1 +apvm:debug=1 -f plusargs.f plusargs.v 

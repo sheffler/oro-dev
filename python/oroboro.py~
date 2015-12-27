@@ -1,0 +1,1085 @@
+#
+# Oroboro is an APVM application that abstracts most of
+# the VPI interface for writers of Python applications
+# that interact with Verilog.
+#
+# Copyright (c) 2004 Tom Sheffler
+#
+#    This source code is free software; you can redistribute it
+#    and/or modify it in source code form under the terms of the GNU
+#    General Public License as published by the Free Software
+#    Foundation; either version 2 of the License, or (at your option)
+#    any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program; if not, write to the Free Software
+#    Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
+#
+
+import apvm
+import string
+import types
+import sys
+import traceback
+
+# Provide these to users of Oro directly
+from apvm import error
+from apvm import warning
+from apvm import set_error_net
+from apvm import set_warning_net
+from apvm import vpi_print
+from apvm import BV
+
+# Debugging flags
+_traceon = 1
+_singlestepping = 0
+
+#
+# Detect particular simulators
+#   Used where simulator dependencies must be noted.
+#
+SIM_CVER        = string.find(string.lower(apvm.sim_info[2]), 'cver') != -1
+SIM_ICARUS      = string.find(string.lower(apvm.sim_info[2]), 'icarus') != -1
+SIM_MSIM        = string.find(string.lower(apvm.sim_info[2]), 'model') != -1
+SIM_NC          = string.find(string.lower(apvm.sim_info[2]), 'nc') != -1
+SIM_VCS         = string.find(string.lower(apvm.sim_info[2]), 'vcs') != -1
+
+#
+# In order to support optional loggers, vpi_print is not called directly, but
+# log-level functions are instead.  These may be re-bound to logger
+# method calls.
+#
+def log_info(s):
+    apvm.vpi_print(s)
+
+def log_warning(s):
+    apvm.vpi_print(s)
+
+def log_error(s):
+    apvm.vpi_print(s)
+
+def log_critical(s):
+    apvm.vpi_print(s)
+
+
+
+#
+# Module global constants
+#
+_nulltime = apvm.pack_s_vpi_time(apvm.vpiSimTime, 0, 0, 0.0)
+
+if SIM_ICARUS or SIM_CVER:
+    # Icarus prefers vpiSuppressVal, CVER is ok with it
+    _nullvalue = apvm.pack_s_vpi_value(apvm.vpiSuppressVal, 0)
+else:
+    # This is appropriate for other simulators
+    _nullvalue = apvm.pack_s_vpi_value(apvm.vpiBinStrVal, "01xz")
+
+_nullintval = apvm.pack_s_vpi_value(apvm.vpiIntVal, 0)
+_nullindex = 0
+_nouserdata = ""
+
+#
+# task states
+#
+[BORN, RUNNING, WAITING, EXITED, KILLED] = range(5)
+
+#
+# Module global variables
+#
+__currenttime = 0L                      # simulation time as a long
+__currenttask = None                    # current task
+__currentreason = None                  # which reason is active
+__maxtaskwid = 4                        # max width of task names
+
+
+
+def _setcurrenttime(t):
+    t = long(t)
+    global __currenttime
+    __currenttime = t
+
+#
+# User uses this to find out current time
+#
+def currenttime():
+
+    """This returns the current simulation time as a long.
+    """
+    
+    global __currenttime
+    return __currenttime
+
+def _setcurrenttask(t):
+    global __currenttask
+    __currenttask = t
+
+#
+# User uses this to find out current task
+#
+def currenttask():
+
+    """This function is used to reference the current task object
+    within a running task.
+    """
+    
+    global __currenttask
+    return __currenttask
+
+def currentsystf():
+
+    """Within a running task, this function will return a reference to the
+    apvm.systf object that is the root of this Oroboro session.
+    """
+
+    global __currenttask
+    return __currenttask.systf
+
+def _setcurrentreason(r):
+    global __currentreason
+    __currentreason = r
+
+#
+# User uses these to determine current reason and
+# index of reason in yield tuple.
+#
+def currentreason():
+
+    """Upon resuming after a yield, this returns a reference to the
+    reason that was triggered.
+    """
+
+    global __currentreason
+    return __currentreason
+
+def currentreasonindex():
+
+    """Upon resuming after a yield, this returns the index of the triggering
+    reason in the yield clause list.
+    """
+    
+    global __currentreason
+    return __currentreason.index
+
+#
+# Keep running max width of task names for message formatting
+#
+def _calctaskwid(tsk):
+    global __maxtaskwid
+    wid = len(tsk.name)
+    if wid > __maxtaskwid:
+        __maxtaskwid = wid
+    
+
+#
+# Simulator control functions
+#
+
+def simstop():
+    """Execute the simulator's $stop function."""
+    apvm.control(apvm.vpiStop)
+
+def simfinish():
+    """Execute the simulator's $finish function."""
+    apvm.control(apvm.vpiFinish)
+
+def simreset():
+    """Execute the simulator's $reset function."""
+    apvm.control(apvm.vpiReset)
+
+
+#
+# Oro keeps time as a long
+#
+
+def _vpi_time_to_long(timestruct):
+
+    (typ, lo, hi, float) = apvm.unpack_s_vpi_time(timestruct)
+
+    if typ == apvm.vpiScaledRealTime:
+        # TOM: maybe this should be an error?
+        return long(float)
+    else:
+        val = (long(hi)<<32) + long(lo)
+        return val
+
+
+def _long_to_vpi_time(ltime):
+
+    ltime = long(ltime)                 # accept int too
+
+    lo = int(ltime & 0xFFFFFFFFL)
+    hi = int((ltime >> 32) & 0xFFFFFFFFL)
+
+    return apvm.pack_s_vpi_time(apvm.vpiSimTime, lo, hi, 0.0)
+
+    
+#
+# A task yields on a reason or reasons.  This helper function
+# accepts a reason, tuple of reasons, or list of reasons,
+# checks the types and turns into a list of reasons.
+#
+
+def _listifyreasons(xx):
+
+    import types
+
+    if type(xx) == types.TupleType:
+        ll = list(xx)
+    elif type(xx) == types.ListType:
+        ll = xx
+    else:
+        ll = [ xx ]
+
+    for l in ll:
+        if not isinstance(l, reason):
+            raise "Must yield with a reason or list of reasons.  Object given is: %s" % str(l)
+
+    return ll
+
+
+#
+# Print a message for the current task
+#
+
+def taskmsg(msg):
+
+    """The user may use this function within a task to print a nicely
+    formatted message with the current simulation time and a task
+    identifier.
+    """
+    
+    tim = currenttime()
+    tsk = currenttask()
+    tid = tsk.id
+    wid = __maxtaskwid
+
+    log_info("%10d [%6d %*s]:%s\n" % (tim, tid, wid,
+                                      tsk.name, msg))
+    
+
+#
+# Print a nice "trace" message that can be turned on or off
+#  - these are used for scheduler stuff usually
+#
+
+def tracemsg(msg):
+
+    """Used internally by Oroboro to format and print execution tracing
+    messages.
+    """
+
+    global _traceon
+    if _traceon:
+        tim = currenttime()
+        tsk = currenttask()
+        tid = tsk.id
+        wid = __maxtaskwid
+
+        log_info("%10d [%6d %*s]:  <%s>\n" % (tim, tid, wid,
+                                              tsk.name, msg))
+
+def traceon():
+    """Turn on trace messages."""
+    global _traceon
+    _traceon = 1
+
+def traceoff():
+    """Turn off trace messages."""
+    global _traceon
+    _traceon = 0
+
+#
+# A signal is a reference to a verilog object with a value
+# (net or reg).
+#
+# This class manages two aspects of signals: the ability to
+# get and set values, and the notification of waiters on signal changes.
+#
+class signal:
+
+    def __init__(self, path_or_h):
+
+        """A signal object may be initialized with either a full
+        pathname to the Verilog object, or a VPI handle.
+        """
+
+        if type(path_or_h) == types.StringType:
+            # assume it is a pathname
+            self.path = path_or_h
+            self.vpih = apvm.handle_by_name(path_or_h, None)
+        else:
+            # assume it is a vpi handle
+            self.vpih = path_or_h
+            self.path = apvm.get_str(apvm.vpiFullName, path_or_h)
+
+        tracemsg("Signal: %s" % self.path)
+
+        self.waiters = { }              # waiters on sigchange events
+        self.poswaiters = { }           # waiters on posedge events
+        self.negwaiters = { }           # waiters on negedge events
+
+        # Callback handle if ours has been scheduled
+        self.handle = None
+
+        # One pending RW synch for this signal
+        self.rwcbscheduled = None
+
+        # Posedge and Negedge use simple-minded algorithm
+        self.lastintval = 2
+        self.newintval = 0
+
+    def __str__(self):
+
+        return "<Signal %s>" % self.path
+        
+
+    def get(self):
+
+        """Return the value of this signal as a BV"""
+
+	bv = apvm.bv_from_vpi(self.vpih)
+        return bv
+
+
+    def set(self, bv, delay=0):
+
+        """Set the value of this signal using the given BV.
+        Optional delay schedules assignment at a future time.
+        """
+
+        if _traceon:
+            tracemsg("SIGNAL SET %s %s %s" % (str(self), str(bv), str(delay)))
+	apvm.bv_to_vpi(self.vpih, bv, delay)
+
+
+    # Strategy - once a signal is waited on for a sigchange, it
+    # schedules an un-cancellable callback.  This is probably safer
+    # and more portable than cancelling it all the time.
+        
+
+    def addwaiter(self, w):
+	if w not in self.waiters:
+	    self.waiters[w] = None
+
+        if not self.handle:
+            self.create_valuechange_cb()
+
+    def removewaiter(self, w):
+
+        del self.waiters[w]
+
+    def addposwaiter(self, w):
+	if w not in self.poswaiters:
+	    self.poswaiters[w] = None
+
+        if not self.handle:
+            self.create_valuechange_cb()
+
+    def removeposwaiter(self, w):
+
+        del self.poswaiters[w]
+
+    def addnegwaiter(self, w):
+	if w not in self.negwaiters:
+	    self.negwaiters[w] = None
+
+        if not self.handle:
+            self.create_valuechange_cb()
+
+    def removenegwaiter(self, w):
+
+        del self.negwaiters[w]
+
+    #
+    # Register with VPI to be called back for value changes on sig
+    #
+    def create_valuechange_cb(self):
+
+        tracemsg("Signal schedule callback - %s" % self.path)
+
+        #
+        # Handling different simulators is tough:
+        #  Icarus is fine with None for the value.
+        #  CVER requires _nullvalue
+        #
+        
+        self.handle = apvm.schedule_cb(self.callback, # reference to method below
+                                       apvm.cbValueChange,
+                                       self.vpih,
+                                       _nulltime,
+                                       # None,
+                                       _nullvalue,
+                                       _nullindex,
+                                       _nouserdata)
+
+    
+    #
+    # This is the method called when the VPI signal changes.
+    # This method may be called many times in one simulation step.
+    # Since we want the final value of the object, we 
+    # schedule another callback for a RW region.
+    #
+    def callback(self, reas, object, time, value, index, userdata):
+
+	_setcurrenttime(_vpi_time_to_long(time))
+        tracemsg("Callback - %s %s %s" % (self.path, reas, value))
+
+        # Ask to be called back in a RW (read/write) synch region
+        if not self.rwcbscheduled:
+            self.rwhandle = apvm.schedule_cb(self.rwcallback,
+                                             apvm.cbReadWriteSynch,
+                                             self.vpih,
+                                             _nulltime,
+                                             None,
+                                            # _nullvalue,
+                                             _nullindex,
+                                             _nouserdata)
+            self.rwcbscheduled = 1
+            
+    #
+    # This method is called in a RW synch region where it is
+    # safe to get the value of the signal.
+    #
+    def rwcallback(self, reas, object, time, value, index, userdata):
+
+        self.rwcbscheduled = 0
+
+        self.lastintval = self.newintval
+        # get value as an int (Note: x/z handling)
+        self.newintval = apvm.get_value_like(self.vpih, _nullintval)[1]
+
+        # BUG: This call is unnecessary, and sometimes wrong
+	# _setcurrenttime(_vpi_time_to_long(time))
+
+        tracemsg("RwCallback - %s %s %s %s waiters:%d" % (self.path, reas, apvm.unpack_s_vpi_time(time), value, len(self.waiters)))
+        tracemsg("  RwWaiters: %s" % str(self.waiters))
+        tracemsg("  PosWaiters: %s" % str(self.poswaiters))
+        tracemsg("  NegWaiters: %s" % str(self.negwaiters))
+
+        # Notify sigchange waiters
+        for w in self.waiters.keys():
+            w()
+
+        # a POSEDGE is if last integer value was 0 and new one is 1
+        if self.lastintval == 0 and self.newintval == 1:
+            for w in self.poswaiters.keys():
+                w()
+                    
+
+        # a NEGEDGE is if last integer value was 1 and new one is 0
+        if self.lastintval == 1 and self.newintval == 0:
+            for w in self.negwaiters.keys():
+                w()
+
+#
+# An event is an Oro object that has a list of listeners that want
+# to know when the event is posted.
+#
+# There are two potential policies for handling "post."
+#  - a post call immediately invokes the waiters
+#  - a post is handled by a 0-delay callback
+#
+# Oroboro currently implements the first policy for evaluation.
+#
+class event:
+
+    eventtbl = { "id" : 1L }
+
+    # Methods:
+    
+    def __init__(self, nicename=""):
+
+	self.waiters = { }
+	self.val = None
+        self.nicename = nicename
+
+        self.id = self.eventtbl["id"]
+        self.eventtbl["id"] = self.eventtbl["id"] + 1
+
+        tracemsg("Event: %d created" % self.id)
+
+    def __str__(self):
+
+        return "<Event %d>" % self.id
+
+    #
+    # Notify waiters that want to hear about this event.
+    #
+    def post(self, val=None):
+
+        tracemsg("Post: %s Val: %s" % (str(self), str(val)))
+
+	self.val = val
+	for w in self.waiters.keys():
+	    w()
+
+    #
+    # Ask to be notified about this event.
+    #
+    def addwaiter(self, w):
+	if w not in self.waiters:
+	    self.waiters[w] = None
+        
+    #
+    # Remove the waiter from the notification list.
+    #
+    def removewaiter(self, w):
+        del self.waiters[w]
+
+#
+# This is the real workhorse.  A task is a wrapper around a generator function
+# that yields with a list of reasons to be resumed.
+#
+class task:
+
+    # dict object to hold task global data
+    tasktbl = { "id" : 1L, }
+
+    def __init__(self, fn, *args):
+
+	self.g = None			# generator function - after started
+        self.fn = fn                    # generator function
+        self.args = args                # startup args
+	# self.name = ""		# useful for debugging (future use)
+        try:
+            self.name = fn.__name__     # fns and methods have __name__
+        except:
+            self.name = ""
+        _calctaskwid(self)              # update max width of task names
+
+	self.id = self.tasktbl["id"]
+        self.tasktbl["id"] = self.tasktbl["id"] + 1
+	self.parent = currenttask()	# another task
+	self.systf = currentsystf()	# an APVM systf instance
+        self.status = BORN
+        self.result = 0                 # final value of task, if any
+	
+	# when a task yields this holds a copy
+	self.reasons = [ ]
+
+        # if other tasks want status change information, they wait to be notified
+        self.waiters = { }
+
+        # schedule the initial callback that gets this task going
+        self.kickoff()
+
+    def __str__(self):
+
+        return "<Task %d>" % self.id
+
+    #
+    # Schedule the #0 delay callback that starts a new task.
+    #
+    def kickoff(self):
+
+        self.khandle = apvm.schedule_cb(self.kicker,
+                                        apvm.cbAfterDelay,
+                                        currentsystf().systf,
+                                        _long_to_vpi_time(0),
+                                        _nullvalue,
+                                        _nullindex,
+                                        _nouserdata)
+
+    #
+    # This is the callback that creates the generator for the task.
+    #
+    def kicker(self, reas, object, time, value, index, userdata):
+
+        tracemsg("Kicker! " + str(self))
+
+        self.khandle = None             # GC
+        self.g = apply(self.fn, self.args) # create generator
+
+        # This test ensures that user has provided a generator
+        if type(self.g) != types.GeneratorType:
+            print "*** OROBORO ERROR ***"
+            raise "Argument to task() must be a GeneratorType"
+        
+        self.runstep()                  # run to first yield
+        
+
+    #
+    # Wake up this task because a particular reason has fired.
+    # - cancel the other reasons
+    # - set record of which reason is current one
+    # - reasons should be indicated by type and object
+    #
+    def runstep(self):
+
+        if not self.g:                  # if not scheduled, can't run it
+            print self.fn, self.args, self.g
+            raise "Task %s not started!" % str(self)
+
+        prevtask = currenttask()        # restore when done
+        _setcurrenttask(self)           # set global task identifier
+
+        tracemsg("Runstep")
+
+	for r in self.reasons:
+            r.cancel_it()               # cancel old reasons
+	self.reasons = [ ]		# GC list
+
+	# advance our generator and obtain next reasons
+	try:
+            self.status = RUNNING
+            tracemsg("Stepping Generator")
+            rr = self.g.next()
+
+            while isinstance(rr, noreason):
+                # null reason implementation
+                rr = self.g.next()
+
+	    self.reasons = _listifyreasons(rr)
+            tracemsg("Yield on %s" %
+                     string.join(map(lambda x: str(x), self.reasons)))
+            
+            self.status = WAITING
+
+        # generator exits
+	except StopIteration:
+
+	    # task has ended - notify waiters on status change
+            self.status = EXITED
+            _setcurrenttask(prevtask)   # on exception, still need to do
+	    self.endtask()
+            self.g = None               # GC generator
+            return
+
+        # task has other uncaught exception
+        except:
+
+            sys.stdout.flush()
+            sys.stderr.write("*** Python Exception Encountered ***\n")
+
+            # Print the traceback
+            traceback.print_exc()
+            if self.systf.exitonexcept:
+                sys.stderr.write("*** Oroboro Exiting - exit(1) ***\n")
+                sys.exit(1)
+
+
+        # Enumerate, assign ids, schedule
+        for i in range(len(self.reasons)):
+            r = self.reasons[i]
+            r.index = i
+            r.schedule_it()
+
+        _setcurrenttask(prevtask)
+
+        tracemsg("End of Runstep")
+
+        # pause for user CR if single stepping for debugging
+        if _singlestepping:
+            sys.stdin.readline()
+
+
+    def kill(self):
+
+        """Kill this task by cancelling all of its reasons.
+        """
+
+        prevtask = currenttask()
+        _setcurrenttask(self)
+
+        tracemsg("Killing Myself")
+
+        for r in self.reasons:
+            r.cancel_it()
+        self.reasons = [ ]
+        self.status = KILLED
+        # notify waiters of status change
+        _setcurrenttask(prevtask)
+        self.endtask()
+
+
+    #
+    # If other tasks want status change notifications they wait on this.
+    # This first implementation of Oro will chain right to them.
+    #
+    def endtask(self):
+        # a waiter is a callable method of a reason
+        for w in self.waiters.keys():
+            w()
+            
+    def addwaiter(self, w):
+	if w not in self.waiters:
+	    self.waiters[w] = None
+
+    def removewaiter(self, w):
+        del self.waiters[w]
+
+        
+
+#
+# This is the base class for all reasons.
+#
+# A bare reason has no associated object, only a task waiting
+# on it.  It is not to be used directly.
+#
+class reason:
+
+    def __init__(self):
+
+	self.task = currenttask()
+	self.cancelled = None
+
+        # Reasons are assigned an index when put into a list and yielded on
+        self.index = 0
+
+    def __str__(self):
+
+        return "<Reason>"
+
+    def schedule_it(self):
+
+        if self.cancelled:
+            raise "Cannot re-use cancelled reason: %s" % str(self)
+
+        tracemsg("Schedule %s" % self)
+	self.cancelled = None
+
+    def cancel_it(self):
+
+        tracemsg("Cancel %s" % self)
+	self.cancelled = 1
+	self.task = None
+
+    def do_it(self):
+
+        tracemsg("Do %s" % self)
+
+        if self.cancelled:
+            return
+
+        prevreason = currentreason()
+	_setcurrentreason(self)
+	self.task.runstep()
+        _setcurrentreason(prevreason)
+
+#
+# No reason is a way to form a generator for the oroboro scheduler
+# that does not result in a callback.  It is an alternative to
+# the use of
+#   yield timeout(0)
+#
+
+class noreason(reason):
+
+    pass
+
+
+#
+# VPI Callback reasons turned out to be simple.  We just schedule
+# the callback.  VPI callbacks are never cancelled, so we avoid issues
+# with vpi_remove_cb.
+#
+# Appropriate cbreasons are:
+#  apvm.[cbReadOnlySynch, cbReadWriteSynch, cbNextSimTime, etc]
+#
+class vpireason(reason):
+
+    def __init__(self, cbreason):
+
+        reason.__init__(self)
+        self.cbreason = cbreason
+
+    def __str__(self):
+
+        return "<VpiReason %d>" % self.cbreason
+
+    def schedule_it(self):
+
+        reason.schedule_it(self)
+
+        self.handle = apvm.schedule_cb(self.callback,
+                                       self.cbreason,
+                                       currentsystf().systf,
+                                       _nulltime,
+                                       _nullvalue,
+                                       _nullindex,
+                                       _nouserdata)
+
+    def callback(self, reas, object, time, value, index, userdata):
+
+        if self.cancelled:
+            return
+
+        _setcurrenttime(_vpi_time_to_long(time))
+	reason.do_it(self)
+        
+#
+# Sigchange reasons are pretty simple because signals themselves do
+# most of the work.  If a signal is asked to produce sigchange
+# events, the signal registers for callbacks and keeps track of the details.
+# The sigchange reason code consists of registering a waiter.
+#
+class sigchange(reason):
+
+    def __init__(self, sig):
+
+        assert isinstance(sig, signal)
+	self.sig = sig
+	reason.__init__(self)
+
+    def __str__(self):
+
+        return "<Sigchange: %s>" % self.sig
+
+    def schedule_it(self):
+
+        self.sig.addwaiter(self.do_it)
+	reason.schedule_it(self)
+
+    def cancel_it(self):
+
+        self.sig.removewaiter(self.do_it)
+        reason.cancel_it(self)
+        
+#
+# Wait for the signal to transition from a 0 to a 1.
+#
+class posedge(reason):
+
+    def __init__(self, sig):
+
+        assert isinstance(sig, signal)
+	self.sig = sig
+	reason.__init__(self)
+
+    def __str__(self):
+
+        return "<Posedge: %s>" % self.sig
+
+    def schedule_it(self):
+
+        self.sig.addposwaiter(self.do_it)
+	reason.schedule_it(self)
+
+    def cancel_it(self):
+
+        self.sig.removeposwaiter(self.do_it)
+        reason.cancel_it(self)
+
+
+#
+# Wait for the signal to transition from a 1 to a 0.
+#
+class negedge(reason):
+
+    def __init__(self, sig):
+
+        assert (sig, signal)
+	self.sig = sig
+	reason.__init__(self)
+
+    def __str__(self):
+
+        return "<Negedge: %s>" % self.sig
+
+    def schedule_it(self):
+
+        self.sig.addnegwaiter(self.do_it)
+	reason.schedule_it(self)
+
+    def cancel_it(self):
+
+        self.sig.removenegwaiter(self.do_it)
+        reason.cancel_it(self)
+
+#
+# Wait for a timeout callback.  Requesting this schedules a VPI callback.
+#
+class timeout(reason):
+
+    def __init__(self, interval):
+
+        # test that interval is a long
+        self.interval = long(interval)
+        reason.__init__(self)
+
+    def __str__(self):
+
+        return "<Timeout %d>" % self.interval
+
+    def schedule_it(self):
+
+        reason.schedule_it(self)
+
+        self.handle = apvm.schedule_cb(self.callback,
+                                       apvm.cbAfterDelay,
+                                       currentsystf().systf,
+                                       _long_to_vpi_time(self.interval),
+                                       _nullvalue,
+                                       _nullindex,
+                                       _nouserdata)
+
+    def cancel_it(self):
+
+        # Allow these to transpire and then cancel in Python
+        reason.cancel_it(self)
+
+    def callback(self, reas, object, time, value, index, userdata):
+
+        _setcurrenttime(_vpi_time_to_long(time))
+
+        if self.cancelled:
+
+            tracemsg("Timeout quietly ignored")
+            return
+
+	reason.do_it(self)
+        
+
+#
+# To wait on an event.
+#
+class waitevent(reason):
+
+    def __init__(self, ev):
+
+        # test that ev is an event
+        if not isinstance(ev, event):
+            raise "Can only wait on an event.  Object given is: %s" % str(ev)
+
+        self.ev = ev
+        reason.__init__(self)
+
+    def __str__(self):
+
+        return "<Wait %s>" % self.ev
+
+    def schedule_it(self):
+
+        self.ev.addwaiter(self.do_it)
+	reason.schedule_it(self)
+
+    def cancel_it(self):
+
+        self.ev.removewaiter(self.do_it)
+        reason.cancel_it(self)
+
+#
+# To wait on the status change of a task
+#
+class status(reason):
+
+    def __init__(self, t):
+
+        # test that t is a task
+        if not isinstance(t, task):
+            raise "Can only wait on status change of a task.  Object given is: %s" % str(t)
+
+        self.t = t
+        reason.__init__(self)
+
+    def __str__(self):
+
+        return "<Status %s>" % self.t
+
+    def schedule_it(self):
+
+        self.t.addwaiter(self.do_it)
+	reason.schedule_it(self)
+
+    def cancel_it(self):
+
+        self.t.removewaiter(self.do_it)
+        reason.cancel_it(self)
+
+#
+# The root task is something that is the parent of all tasks and
+# never dies (because it is never really running).  It appears
+# to be running at all times, however.
+#
+class _roottask:
+
+    def __init__(self, systf):
+
+        self.g = None
+        self.name = "ROOT"
+        self.id = 0L
+        self.parent = None
+        self.systf = systf
+        self.status = RUNNING
+
+        _setcurrenttask(self)
+        tracemsg("IN ROOT")
+
+    def __str__(self):
+
+        return "<ROOTTASK>"
+
+    def runstep(self):
+
+        return
+
+
+#
+# The main oroboro application is small.
+#
+class oroboro(apvm.systf):
+
+    def soscb(self):
+
+        # read module and function name using APVM standards
+        #  i.e. on command line +oro:module=xxx +oro:task=yyy
+        self.modulename = self.my_config_param_string("module")
+        if not self.modulename:
+            print "Error: Must give Oroboro 'module' name."
+            sys.exit(1)
+
+        self.taskname = self.my_config_param_string("task")
+        if not self.taskname:
+            print "Error: Must give Oroboro main 'task' name."
+            sys.exit(1)
+
+        # Set the random seed if requested: +oro:seed=zzz
+        sd = self.my_config_param_int("seed")
+        if sd:
+            import random
+            random.seed(sd)
+            log_info("*** Oroboro seed: %d\n" % sd)
+
+        # Set our error/traceback behavior - default to exit
+        exitonexcept = self.my_config_param_int("exitonexcept")
+        if exitonexcept:
+            log_info("*** Oroboro Exit On Exception: %d\n" % exitonexcept)
+            self.exitonexcept = exitonexcept
+        else:
+            # default if not set is to exit if traceback encountered
+            self.exitonexcept = 1
+
+
+    def eoscb(self):
+
+        # print final error report with APVM
+        apvm.error_finalize("*** Oroboro Complete")
+
+
+    def calltf(self):
+
+        log_info("*** Oroboro inst '%s', module '%s', task '%s'\n"
+                 % (self.name, self.modulename, self.taskname))
+
+        mod = __import__(self.modulename)
+
+        if not mod.__dict__.has_key(self.taskname):
+            print ("Error: Main task '%s' was not found in module '%s'."
+                   % (self.taskname, self.modulename))
+            sys.exit(1)
+            
+        userfn = mod.__dict__[self.taskname]
+
+        # Create a "fake" root task so that the user task has a parent
+        _roottask(self)
+
+        # Start user's main function as a task with APVM systf instance arg
+        t = task(userfn, self)
+
+        return int(t.result)

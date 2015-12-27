@@ -1,0 +1,7 @@
+#!/bin/bash
+
+export PYTHONPATH=.:../python
+
+# setenv APVM_C_DEBUGGING 1
+
+cver -informs -et +verbose +loadvpi=../src/libapvmvpi:apvm_startup py0.v

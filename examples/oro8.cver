@@ -1,0 +1,7 @@
+#!/bin/csh
+
+setenv PYTHONPATH .:../python
+
+# -et +verbose 
+cver -informs +loadvpi=../src/libapvmvpi:apvm_startup oro8.v memmod.v +oro:module=oro8 +oro:task=mainfn
+

@@ -1,0 +1,41 @@
+
+FILE MANIFEST
+
+apvm.py
+	Main APVM application.
+
+BV.py
+	Four-valued bit-vector class.
+
+oroboro.py
+	Main Oroboro application.
+
+te.py
+	Temporal expression package for Oroboro. (experimental)
+
+vpi_loghandler.py
+	Logging handler that directs messages to vpi_print stream.
+
+vpidefs.py
+	Py script used during build to extract VPI #define values from
+	vpi_user.h header file and translate into Python symbols.
+
+
+EXAMPLES AND REUSABLE APPLICATIONS
+
+apvm_delay.py
+	Model of a pipelined delay element.
+
+apvm_mem.py
+	A hashable memory model usable in Verilog.
+
+apvm_rusage.py
+	Print the Unix resource usage of the simulation process
+	at the end of simulation.
+
+apvm_sr.py
+	A generic package that applies test stimulus and checks
+	test responses using a file representation of a test.
+
+
+

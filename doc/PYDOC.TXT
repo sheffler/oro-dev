@@ -1,0 +1,738 @@
+***
+*** APVM WARNING REGARDING CVER:
+*** Only ONE $apvm() instance will be handled correctly.
+***
+*** APVM: Copyright (c) 2004 Tom Sheffler.
+*** APVM: Licensed under GPL.  No warranty provided.
+GPLCVER_2.00d of 09/14/04 (Linux-elf).
+Copyright (c) 1991-2004 Pragmatic C Software Corp.
+  All Rights reserved.  Licensed under the GNU General Public License (GPL).
+  See the 'COPYING' file for details.  NO WARRANTY provided.
+Today is Sat Oct  9 02:35:20 2004.
+*** Registering APVM PLI functions.
+Compiling source file "apvmdoc.v"
+Highest level modules:
+pydoc
+*** APVM inst 'Pydoc!', module 'apvmdoc', class 'apvmdoc'
+Start of simulation method
+
+Help on module apvm:
+
+NAME
+    apvm
+
+FILE
+    /home/sheffler/src/apvm_020/python/apvm.py
+
+DESCRIPTION
+    # APVM:  A Python VPI Module
+    #
+    # Python implementation of class for Verilog VPI interface.
+    #
+    # Copyright (c) 2004 Tom Sheffler
+    #
+    #    This source code is free software; you can redistribute it
+    #    and/or modify it in source code form under the terms of the GNU
+    #    General Public License as published by the Free Software
+    #    Foundation; either version 2 of the License, or (at your option)
+    #    any later version.
+    #
+    #    This program is distributed in the hope that it will be useful,
+    #    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    #    GNU General Public License for more details.
+    #
+    #    You should have received a copy of the GNU General Public License
+    #    along with this program; if not, write to the Free Software
+    #    Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
+    #
+
+CLASSES
+    systf
+    
+    class systf
+     |  This is the base systf class.
+     |  
+     |  Methods defined here:
+     |  
+     |  EndOfRestart(self)
+     |      End of Restart callback method.
+     |  
+     |  EndOfSave(self)
+     |      End of save callback method.
+     |  
+     |  StartOfRestart(self)
+     |      Start of Restart callback method.
+     |  
+     |  StartOfSave(self)
+     |      Start Of Save callback method.
+     |  
+     |  __init__(self, systf, cbfn, name, mname, cname, vobjs)
+     |      The args to this initializer are passed from the C layer of the APVM package.
+     |      They are:
+     |        systf - vpiHandle to the $apvm instance
+     |        cbfn  - generic C callback function.  (Always the same for now.)
+     |        name  - our instance name: either a string or a Verilog object.
+     |        mname - the Python module name
+     |        cname - the Python class name
+     |        vobjs - a tuple of vpiHandles for the remainder of the instance arguments.
+     |  
+     |  callback(self, reason, object, time, value, userdata)
+     |      The method called as a result of scheduled "callmeback" calls.
+     |  
+     |  callmeback(self, reason, object, time, value, userdata)
+     |      Simplified callback mechanism.  Schedule our callback with
+     |      the given reason, time value and userdata.  Upon callback, the
+     |      dispatch function will call our callback method with the
+     |      args given.
+     |  
+     |  calltf(self)
+     |      The simple calltf method.  This is called whenever Verilog execution
+     |      reaches the $apvm instance.
+     |  
+     |  eoscb(self)
+     |      End of simulation callback method.
+     |  
+     |  my_config_param_int(self, param)
+     |      Like my_config_param_string, but return result as an integer.
+     |  
+     |  my_config_param_string(self, param)
+     |      Get configuration parameter named "param" from the section of
+     |      the config file named [self.name], or from plusarg of the form
+     |      +name:param=value.
+     |  
+     |  restore_client_data(self)
+     |      To implement save/restore, the derived class should
+     |      override this method calling self.restore_data().
+     |  
+     |  restore_data(self, key)
+     |      Direct access to shelve object.  Clients should try to use restore_client_data
+     |      instead, but if a particular key is required, the client may use this.
+     |  
+     |  save_client_data(self)
+     |      To implement save/restore, the derived class should call
+     |      self.save_data() with the appropriate data tuple here.
+     |  
+     |  save_data(self, key, data)
+     |      Direct access to shelve object.  Clients should try to use save_client_data
+     |      instead, but if a particular key is required, the client may use this.
+     |  
+     |  soscb(self)
+     |      Start of simulation callback method.
+
+FUNCTIONS
+    __init__()
+    
+    bv_from_vpi(handle)
+        # Make a bitvector from the value of a VPI handle.
+    
+    bv_to_vpi(handle, bv, delay=0)
+        # Put a bit-vector value on a VPI handle with delay given.
+        #  - integer delay for vpiSimTime in range 0..2^32-1
+        #  - long delay for vpiSimTime in range 0..2^64-1
+        #  - float delay for vpiScaledRealTime
+    
+    callback_dispatcher(cbdata)
+    
+    cancel_cb(key)
+        Used with the result of schedule_cb.  This function can un-schedule
+        a callback if it has not yet expired.
+    
+    close_shelve_file()
+        # This is called by every systf object as well on EndOfSave
+    
+    config_file_find_and_open()
+        Search order for config file is:
+        - environment variable APVM_CONFIGFILE
+        - local dir file "apvm.cfg"
+        - home dir file  "~/apvm.cfg"
+    
+    config_param_int(name, param)
+        # Return plusarg or config param as an int (or None if not found)
+    
+    config_param_string(name, param)
+        # Return plusarg or config param for the name given.
+    
+    control(...)
+        control(operation)
+        
+        valid operations:
+        vpiStop   - execute simulator's $stop
+        vpiFinish - execute simulator's $finish
+        vpiReset  - execute simulator's $reset
+    
+    error(s)
+        # Print the error message and increment the Verilog error
+        # variable if it has been bound.
+    
+    error_finalize(banner='APVM Simulation Complete')
+        # Call this at the end of simulation for a report, if desired.
+    
+    free_object(...)
+        Free an object handle.
+    
+    generic_callback(...)
+        no doc
+    
+    get(...)
+        get_str(handle, property)
+        
+        Get the string-valued property named from the VPI object indicated by handle.
+    
+    get_str(...)
+        get_str(handle, property)
+        
+        Get the string-valued property named from the VPI object indicated by handle.
+    
+    get_time_like(...)
+        no doc
+    
+    get_val_bin_str(...)
+        Get the value of a vpiHandle as a binary string.
+    
+    get_value_like(...)
+        no doc
+    
+    handle_by_name(...)
+        handle_by_name(pathname, scope)
+        
+        Get the VPI handle for 'pathname' in the scope given (a VPI handle).
+        If scope is None, then use the NULL scope.
+    
+    iterate(...)
+        Get iterator handle.
+    
+    open_shelve_file()
+        # This fn is call by every systf object, but needs to only open
+        # one file on StartOfRestore
+    
+    pack_s_cb_data(...)
+        no doc
+    
+    pack_s_vpi_time(...)
+        pack_s_vpi_time(int, int, int, float) -> s_vpi_time opaque C object
+        
+        Construct an opaque s_vpi_time object from Python arguments of the types
+        shown above.  The opaque s_vpi_time object may be turned back into its
+        Python representation with deconstruct_s_vpi_time.
+    
+    pack_s_vpi_value(...)
+        pack_s_vpi_value(type, value) -> s_vpi_value opaque C object
+        
+        type is one of the VPI constants vpiBinStrVal, vpiHexStrVal, etc.
+        value is placed into the union field of the s_vpi_value based on
+        its type.
+    
+    plusarg_flag(name)
+        # return true if "+name" is in list
+    
+    plusarg_option(name)
+        # look for "+name=value"
+    
+    put_value(...)
+        put_value(handle, value, timeval/None, delaytype)
+        
+        Put a VPI value on a VPI object named by 'handle' with a delay using
+        the timeval and delaytype.  A timeval of None is translated into the
+        C value NULL.
+    
+    register_cb(...)
+        no doc
+    
+    remove_cb(...)
+        Remove a registered VPI callback given its handle.
+    
+    scan(...)
+        scan to next obj in iterator.  Return None after last object.
+    
+    schedule_cb(fn, reason, obj, tim, value, index, userdata)
+        User-friendly callback scheduler. Schedule a VPI callback.
+        Arguments are:
+        
+          fn - a callable Python object (function or method)
+          reason - a VPI reason (cbValueChange, cbAfterDelay, etc)
+          obj - VPI handle for an object
+          tim - product of pack_s_vpi_time
+          value - product of pack_s_vpi_value
+          index - object index
+          userdata - arbitrary Python data to be associated with callback
+        
+        This function returns a Python object (key) that can be used
+        with cancel_cb before the callback has expired.
+    
+    set_error_net(path)
+        # Set the verilog net that is used for error counting
+        # Example:
+        #   set_error_net("top.error_counter")
+    
+    set_warning_net(path)
+        # Set the verilog net that is used for warning counting
+    
+    unpack_s_cb_data(...)
+        no doc
+    
+    unpack_s_vpi_time(...)
+        unpack_s_vpi_time(s_vpi_time object) -> (int, int, float)
+        
+        Given a pointer to an opaque C object that is a VPI s_vpi_time struct,
+        return its representation as a Python tuple of the types shown
+        above.
+    
+    unpack_s_vpi_value(...)
+        unpack_s_vpi_value(s_vpi_value object) -> (int, <value>)
+        Given a s_vpi_value opaque C object, return a two-tuple
+        representing the integer value of its 'type' field and a Python value
+        corrresponding to its value field.
+    
+    vpi_print(...)
+        Print the string to the Verilog logfile.
+    
+    warning(s)
+        # Print the warning message and increment the Verilog warning
+        # variable if it has been bound.
+
+DATA
+    cbAfterDelay = 9
+    cbAssign = 25
+    cbAtStartOfSimTime = 5
+    cbDeassign = 26
+    cbDisable = 27
+    cbEndOfCompile = 10
+    cbEndOfReset = 20
+    cbEndOfRestart = 18
+    cbEndOfSave = 16
+    cbEndOfSimulation = 12
+    cbEnterInteractive = 21
+    cbError = 13
+    cbExitInteractive = 22
+    cbForce = 3
+    cbInteractiveScopeChange = 23
+    cbNextSimTime = 8
+    cbPLIError = 28
+    cbReadOnlySynch = 7
+    cbReadWriteSynch = 6
+    cbRelease = 4
+    cbSignal = 29
+    cbStartOfReset = 19
+    cbStartOfRestart = 17
+    cbStartOfSave = 15
+    cbStartOfSimulation = 11
+    cbStmt = 2
+    cbTchkViolation = 14
+    cbUnresolvedSystf = 24
+    cbValueChange = 1
+    cbfn0 = <PyCObject object>
+    configobject = <ConfigParser.ConfigParser instance>
+    error_count = 0
+    error_count_h = None
+    error_format = <PyCObject object>
+    shelve_object = None
+    sim_info = (3, ['cver', '+loadvpi=../src/libapvmvpi:apvm_startup', 'ap...
+    vpi0 = 0
+    vpi1 = 1
+    vpiActive = 49
+    vpiActiveTimeFormat = 119
+    vpiAddOp = 24
+    vpiAlways = 1
+    vpiAndPrim = 1
+    vpiAnyEdge = 63
+    vpiArgument = 89
+    vpiArithLShiftOp = 41
+    vpiArithRShiftOp = 42
+    vpiArray = 28
+    vpiAssignStmt = 2
+    vpiAssignment = 3
+    vpiAttribute = 105
+    vpiAutomatic = 50
+    vpiBegin = 4
+    vpiBinStrVal = 1
+    vpiBinaryConst = 3
+    vpiBit = 90
+    vpiBitAndOp = 28
+    vpiBitNegOp = 4
+    vpiBitOrOp = 29
+    vpiBitSelect = 106
+    vpiBitXNorOp = 31
+    vpiBitXnorOp = 31
+    vpiBitXorOp = 30
+    vpiBlocking = 41
+    vpiBufPrim = 7
+    vpiBufif0Prim = 9
+    vpiBufif1Prim = 10
+    vpiCallback = 107
+    vpiCancelEvent = 7
+    vpiCase = 5
+    vpiCaseEqOp = 16
+    vpiCaseExact = 1
+    vpiCaseItem = 6
+    vpiCaseNeqOp = 17
+    vpiCaseType = 42
+    vpiCaseX = 2
+    vpiCaseZ = 3
+    vpiCell = 51
+    vpiCellInstance = 8
+    vpiChargeStrength = 27
+    vpiCmosPrim = 15
+    vpiCombPrim = 28
+    vpiCompile = 1
+    vpiConcatOp = 33
+    vpiCondition = 71
+    vpiConditionOp = 32
+    vpiConfig = 52
+    vpiConnByName = 21
+    vpiConstType = 40
+    vpiConstant = 7
+    vpiConstantSelect = 53
+    vpiContAssign = 8
+    vpiContAssignBit = 128
+    vpiDataPolarity = 35
+    vpiDeassign = 9
+    vpiDecConst = 1
+    vpiDecStrVal = 3
+    vpiDecompile = 54
+    vpiDefAttribute = 55
+    vpiDefDecayTime = 48
+    vpiDefDelayMode = 47
+    vpiDefFile = 15
+    vpiDefLineNo = 16
+    vpiDefName = 9
+    vpiDefNetType = 13
+    vpiDefParam = 10
+    vpiDelay = 72
+    vpiDelayControl = 11
+    vpiDelayDevice = 109
+    vpiDelayModeDistrib = 3
+    vpiDelayModeMTM = 6
+    vpiDelayModeNone = 1
+    vpiDelayModePath = 2
+    vpiDelayModeUnit = 4
+    vpiDelayModeZero = 5
+    vpiDelayTerm = 108
+    vpiDelayType = 56
+    vpiDirection = 20
+    vpiDisable = 12
+    vpiDivOp = 12
+    vpiDontCare = 6
+    vpiDriver = 91
+    vpiEdge = 36
+    vpiEdge01 = 1
+    vpiEdge0x = 4
+    vpiEdge10 = 2
+    vpiEdge1x = 16
+    vpiEdgex0 = 32
+    vpiEdgex1 = 8
+    vpiElseStmt = 73
+    vpiEqOp = 14
+    vpiError = 3
+    vpiEventControl = 13
+    vpiEventOrOp = 35
+    vpiEventStmt = 14
+    vpiExpanded = 25
+    vpiExplicitName = 19
+    vpiExplicitScalared = 23
+    vpiExplicitVectored = 24
+    vpiExpr = 102
+    vpiFile = 5
+    vpiFinish = 67
+    vpiFor = 15
+    vpiForIncStmt = 74
+    vpiForInitStmt = 75
+    vpiForce = 16
+    vpiForceFlag = 5
+    vpiForever = 17
+    vpiFork = 18
+    vpiFrame = 110
+    vpiFullName = 3
+    vpiFullskew = 9
+    vpiFuncCall = 19
+    vpiFuncType = 44
+    vpiFunction = 20
+    vpiGate = 21
+    vpiGateArray = 111
+    vpiGeOp = 19
+    vpiGtOp = 18
+    vpiH = 4
+    vpiHexConst = 5
+    vpiHexStrVal = 4
+    vpiHiZ = 1
+    vpiHighConn = 76
+    vpiHighZ = 1
+    vpiHold = 2
+    vpiIODecl = 28
+    vpiIf = 22
+    vpiIfElse = 23
+    vpiImplicitDecl = 26
+    vpiInTerm = 120
+    vpiIndex = 78
+    vpiInertialDelay = 2
+    vpiInitial = 24
+    vpiInout = 3
+    vpiInput = 1
+    vpiInstanceArray = 121
+    vpiIntConst = 7
+    vpiIntFunc = 1
+    vpiIntVal = 6
+    vpiIntegerVar = 25
+    vpiInterModPath = 26
+    vpiInterModPathDelay = 2
+    vpiInternal = 5
+    vpiInternalScope = 92
+    vpiIterator = 27
+    vpiIteratorType = 57
+    vpiL = 5
+    vpiLShiftOp = 22
+    vpiLargeCharge = 16
+    vpiLeOp = 21
+    vpiLeftRange = 79
+    vpiLhs = 77
+    vpiLibrary = 58
+    vpiLineNo = 6
+    vpiListOp = 37
+    vpiLoad = 93
+    vpiLocalDriver = 122
+    vpiLocalLoad = 123
+    vpiLocalParam = 70
+    vpiLogAndOp = 26
+    vpiLogOrOp = 27
+    vpiLowConn = 80
+    vpiLtOp = 20
+    vpiMIPDelay = 3
+    vpiMediumCharge = 4
+    vpiMemory = 29
+    vpiMemoryWord = 30
+    vpiMinTypMaxOp = 38
+    vpiMinusOp = 1
+    vpiMixedIO = 4
+    vpiModDataPathIn = 94
+    vpiModOp = 13
+    vpiModPath = 31
+    vpiModPathDelay = 1
+    vpiModPathHasIfNone = 71
+    vpiModPathIn = 95
+    vpiModPathOut = 96
+    vpiModule = 32
+    vpiModuleArray = 112
+    vpiMultOp = 25
+    vpiMultiArray = 59
+    vpiMultiConcatOp = 34
+    vpiName = 2
+    vpiNamedBegin = 33
+    vpiNamedEvent = 34
+    vpiNamedEventArray = 129
+    vpiNamedFork = 35
+    vpiNandPrim = 2
+    vpiNegEdge = 50
+    vpiNegative = 2
+    vpiNegedgeOp = 40
+    vpiNeqOp = 15
+    vpiNet = 36
+    vpiNetArray = 114
+    vpiNetBit = 37
+    vpiNetDeclAssign = 43
+    vpiNetType = 22
+    vpiNmosPrim = 13
+    vpiNoChange = 7
+    vpiNoDelay = 1
+    vpiNoDirection = 5
+    vpiNoEdge = 0
+    vpiNone = 12
+    vpiNorPrim = 3
+    vpiNotOp = 3
+    vpiNotPrim = 8
+    vpiNotice = 1
+    vpiNotif0Prim = 11
+    vpiNotif1Prim = 12
+    vpiNullOp = 36
+    vpiNullStmt = 38
+    vpiObjTypeVal = 12
+    vpiOctConst = 4
+    vpiOctStrVal = 2
+    vpiOffset = 60
+    vpiOpType = 39
+    vpiOperand = 97
+    vpiOperation = 39
+    vpiOrPrim = 4
+    vpiOutTerm = 124
+    vpiOutput = 2
+    vpiPLI = 2
+    vpiParamAssign = 40
+    vpiParameter = 41
+    vpiParent = 81
+    vpiPartSelect = 42
+    vpiPathFull = 1
+    vpiPathParallel = 2
+    vpiPathTerm = 43
+    vpiPathType = 37
+    vpiPeriod = 3
+    vpiPlusOp = 2
+    vpiPmosPrim = 14
+    vpiPolarity = 34
+    vpiPort = 44
+    vpiPortBit = 45
+    vpiPortIndex = 29
+    vpiPortInst = 98
+    vpiPorts = 125
+    vpiPosEdge = 13
+    vpiPosedgeOp = 39
+    vpiPositive = 1
+    vpiPowerOp = 43
+    vpiPrimTerm = 46
+    vpiPrimType = 33
+    vpiPrimitive = 103
+    vpiPrimitiveArray = 113
+    vpiProcess = 99
+    vpiProtected = 10
+    vpiPull0 = 3
+    vpiPull1 = 2
+    vpiPullDrive = 32
+    vpiPulldownPrim = 26
+    vpiPullupPrim = 25
+    vpiPureTransportDelay = 4
+    vpiRShiftOp = 23
+    vpiRange = 115
+    vpiRcmosPrim = 18
+    vpiRealConst = 2
+    vpiRealFunc = 2
+    vpiRealVal = 7
+    vpiRealVar = 47
+    vpiRecovery = 6
+    vpiRecrem = 10
+    vpiReg = 48
+    vpiRegArray = 116
+    vpiRegBit = 49
+    vpiRelease = 50
+    vpiReleaseFlag = 6
+    vpiRemoval = 11
+    vpiRepeat = 51
+    vpiRepeatControl = 52
+    vpiReset = 68
+    vpiResolvedNetType = 61
+    vpiReturnEvent = 4096
+    vpiRhs = 82
+    vpiRightRange = 83
+    vpiRnmosPrim = 16
+    vpiRpmosPrim = 17
+    vpiRtranPrim = 19
+    vpiRtranif0Prim = 20
+    vpiRtranif1Prim = 21
+    vpiRun = 3
+    vpiSaveRestartID = 62
+    vpiSaveRestartLocation = 63
+    vpiScalar = 17
+    vpiScalarVal = 5
+    vpiScaledRealTime = 1
+    vpiSchedEvent = 53
+    vpiScheduled = 46
+    vpiScope = 84
+    vpiSeqPrim = 27
+    vpiSetInteractiveScope = 69
+    vpiSetup = 1
+    vpiSetupHold = 8
+    vpiSigned = 65
+    vpiSimNet = 126
+    vpiSimTime = 2
+    vpiSize = 4
+    vpiSizedFunc = 4
+    vpiSizedSignedFunc = 5
+    vpiSkew = 5
+    vpiSmallCharge = 2
+    vpiSpecParam = 54
+    vpiStmt = 104
+    vpiStop = 66
+    vpiStrength0 = 31
+    vpiStrength1 = 32
+    vpiStrengthVal = 10
+    vpiStringConst = 6
+    vpiStringVal = 8
+    vpiStrongDrive = 64
+    vpiSubOp = 11
+    vpiSupply0 = 11
+    vpiSupply1 = 10
+    vpiSupplyDrive = 128
+    vpiSuppressTime = 3
+    vpiSuppressVal = 13
+    vpiSwitch = 55
+    vpiSwitchArray = 117
+    vpiSysFunc = 2
+    vpiSysFuncCall = 56
+    vpiSysFuncInt = 1
+    vpiSysFuncReal = 2
+    vpiSysFuncSized = 4
+    vpiSysFuncTime = 3
+    vpiSysFuncType = 44
+    vpiSysTask = 1
+    vpiSysTaskCall = 57
+    vpiSysTfCall = 85
+    vpiSystem = 4
+    vpiTableEntry = 58
+    vpiTask = 59
+    vpiTaskCall = 60
+    vpiTaskFunc = 127
+    vpiTchk = 61
+    vpiTchkDataTerm = 86
+    vpiTchkNotifier = 87
+    vpiTchkRefTerm = 88
+    vpiTchkTerm = 62
+    vpiTchkType = 38
+    vpiTermIndex = 30
+    vpiTimeFunc = 3
+    vpiTimePrecision = 12
+    vpiTimeQueue = 64
+    vpiTimeUnit = 11
+    vpiTimeVal = 11
+    vpiTimeVar = 63
+    vpiTimeskew = 12
+    vpiTopModule = 7
+    vpiTranPrim = 22
+    vpiTranif0Prim = 23
+    vpiTranif1Prim = 24
+    vpiTransportDelay = 3
+    vpiTri = 4
+    vpiTri0 = 5
+    vpiTri1 = 6
+    vpiTriAnd = 8
+    vpiTriOr = 9
+    vpiTriReg = 7
+    vpiType = 1
+    vpiUdp = 65
+    vpiUdpArray = 118
+    vpiUdpDefn = 66
+    vpiUnaryAndOp = 5
+    vpiUnaryNandOp = 6
+    vpiUnaryNorOp = 8
+    vpiUnaryOrOp = 7
+    vpiUnaryXNorOp = 10
+    vpiUnaryXorOp = 9
+    vpiUnconnDrive = 14
+    vpiUndefined = -1
+    vpiUnknown = 3
+    vpiUse = 101
+    vpiUserDefn = 45
+    vpiUserSystf = 67
+    vpiValid = 64
+    vpiVarSelect = 68
+    vpiVariables = 100
+    vpiVector = 18
+    vpiVectorVal = 9
+    vpiWait = 69
+    vpiWand = 2
+    vpiWarning = 2
+    vpiWeakDrive = 8
+    vpiWhile = 70
+    vpiWidth = 4
+    vpiWire = 1
+    vpiWor = 3
+    vpiX = 3
+    vpiXnorPrim = 6
+    vpiXorPrim = 5
+    vpiZ = 2
+    warning_count = 0
+    warning_count_h = None
+
+
+End of simulation method
+0 simulation events and 0 declarative immediate assigns processed.
+1 behavioral statements executed (1 procedural suspends).
+  Times (in sec.):  Translate 0.1, load/optimize 0.5, simulation 0.2.
+  There were 0 error(s), 0 warning(s), and 1 inform(s).
+End of GPLCVER_2.00d at Sat Oct  9 02:35:21 2004 (elapsed 0.7 seconds).

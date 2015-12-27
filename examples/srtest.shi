@@ -1,0 +1,8 @@
+#!/bin/csh -x
+
+source COMMON.shi
+
+iverilog -o IVWORK/srtest srtest.v
+
+vvp -m../src/libapvmvpi IVWORK/srtest +sr1:file=srtest.sr +sr1:Xdebug=1 +apvm:Xdebug=1
+

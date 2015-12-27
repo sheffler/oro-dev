@@ -1,0 +1,10 @@
+
+CVER notes
+
+- only ONE instance of $apvm() is allowed in a Verilog sim.  Reason is
+  described below.  Still trying to find a good workaround.
+
+- vpi_put_userdata is not yet allowed during the compile phase, which is
+  when APVM wants to associate the systf_h with our userdata.  Current
+  workaround is to use apvm_put/get_userdata instead.
+

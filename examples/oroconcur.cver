@@ -1,0 +1,9 @@
+#!/bin/csh
+
+setenv PYTHONPATH .:../python
+
+# -et +verbose 
+cver -informs +loadvpi=../src/libapvmvpi:apvm_startup oroconcur.v +oro:module=oroconcur +oro:task=mainfn
+
+
+ 

@@ -1,0 +1,14 @@
+#!/bin/csh
+
+#setenv PYTHONPATH .:../python:
+
+setenv PYTHONPATH .:../python:/verify/Python-2.2.3/Python-2.2.3-solaris/Lib:/verify/Python-2.2.3/Python-2.2.3-solaris/Lib/plat-sunos5:/verify/Python-2.2.3/Python-2.2.3-solaris/Lib/lib-tk:/verify/Python-2.2.3/Python-2.2.3-solaris/Modules:/verify/Python-2.2.3/Python-2.2.3-solaris/build/lib.solaris-2.8-sun4u-2.2
+
+# setenv PYTHONHOME /verify/Python-2.2.3/Python-2.2.3-solaris/
+#unsetenv PYTHONHOME
+
+# +plusarg_save tells vcs to compile the args into the runtime
+# vcs -R +vpi ../libapvmvpi_sol.a -P ../apvm.tab /verify/Python-2.2.3/Python-2.2.3-solaris/libpython2.2.a +plusarg_save +option1=value1 +flag1 -f plusargs.f plusargs.v 
+
+simv
+

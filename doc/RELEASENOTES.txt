@@ -1,0 +1,11 @@
+
+Release 0.25
+
+  - un/pack_s_vpi_time lo/hi fields are consitently longs.
+    Support in apvm.py, and in apvm_calltf.c.
+
+  - vpi_print not called directly, instead log_* fns used.
+
+  - removed extraneious calls to _setcurrenttime in rwcallback.
+    Not needed.
+

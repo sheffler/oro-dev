@@ -1,0 +1,38 @@
+
+Building Python properly is a prerequisite for getting APVM to build
+and operate properly.
+
+Environment Variables
+
+  If when starting up APVM, the Python interpreter complains about not
+  being able to find standard libraries then the Python configuration
+  environment variables must be set explicitly.
+
+  Some of these problems may be ameliorated by using the --prefix argument
+  to "configure" properly.
+
+  The path list for the standard libraries can be discovered by
+  invoking Python and printing sys.path.  You can then use this list
+  to construct the path list.
+
+  Some installations may need to set PYTHONHOME too.
+
+
+Linking APVM
+
+  Determining the correct set of libraries that must be linked with
+  libpython2.x.a to form a working Python can be a challenge.  For my
+  Redhat 9 installation of Python 2.3, this list is
+
+	-ldl -lpthread -lutil -lm -ltix8.1.8.3 -ltk8.3 -ltcl8.3 
+
+  If you  have built the Python executable, you can look in the
+  Makefile or the output of the make command for the target "python."
+
+  The Python "distutils" package can be used to extract this
+  information for your Python installation.
+
+
+
+
+

@@ -1,0 +1,53 @@
+
+vpiScaledRealTime
+	not completely implemented in Icarus
+
+vpi_get_time (example: shownets.py)
+	does not work if vpi_handle is the "systf_h" for the $apvm
+	sys func call.  Changing the handle arg to the module allows
+	this to work correctly.
+
+vpi_put_value (delayex, sr, apvm_delay.py)
+	vpiTransportDelay not implemented 
+	vpiPureTransportDelay is
+
+vpi_callback: "value format 1 not supported"
+	can't use vpiBinStrVal to set signal value in callback
+
+	In apvm_delay.py - instead of vpiBinStrVal empty format
+	for callmeback, use something else.
+
+register_cb(cbdata):
+
+	vpi_register_cb returns a pointer to the callback struct.  In
+	the original implementation of APVM, the pointer was released,
+	which causes the default garbage collection alg to call the
+	destructor for the pointer ... which is vpi_free_object.
+
+	In Icarus, this actually cancels the callback.  NC does not
+	seem to behave this way, for one, but the behavior here makes
+	sense too.
+
+	This behavior affects the implementation of callmeback.
+
+Restart callbacks not implemented
+
+get_time_like(vpi_h, t_fmt)
+
+	In the shownets.py demo, I used the systf handle as the vpi_h arg, but
+ 	Icarus did not like this.  By changing the handle to the object that
+	represented the module, the problem went away.
+
+vpiSuppressVal
+
+	Icarus is much pickier about what sort of vpi value it will accept when
+	a value is not appropriate.  Icarus requires vpiSuppressVal while other
+	simulators accept any value and ignore it.
+
+TOM: turning on apvm_calltf.c:debugging sometimes causes Python
+	to print messages about "String or Unicode object expected,
+	instance found instead."
+
+	This was found to be due to calling PyString_AsString to print
+	the debugging message.  Somehow corrupted memory.
+
